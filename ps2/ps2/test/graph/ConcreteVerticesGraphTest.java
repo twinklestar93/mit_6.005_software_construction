@@ -110,18 +110,18 @@ public class ConcreteVerticesGraphTest extends GraphInstanceTest {
 
         assertTrue(a.getLabel().equals("a"));
 
-        a.setTarget(b, 1);
-        Map<Vertex, Integer> targets = a.getTargets();
-        assertTrue("expect a to have b as a target", targets.containsKey(b));
+        a.setTarget(b.getLabel(), 1);
+        Map<String, Integer> targets = a.getTargets();
+        assertTrue("expect a to have b as a target", targets.containsKey(b.getLabel()));
         assertTrue("expect a to have an edge to b of weight 1", targets.containsValue(1));
         assertEquals("expect one target in a.targets", 1, targets.size());
         assertTrue(a.toString().equals("(a, [(b, 1)])"));
 
         Vertex c = new Vertex("c");
-        a.setTarget(c, 2);
+        a.setTarget(c.getLabel(), 2);
         targets = a.getTargets();
-        assertTrue("expect a to have c as a target", targets.containsKey(c));
-        assertTrue("expect a to have an edge to c of weight 2", targets.get(c).equals(2));
+        assertTrue("expect a to have c as a target", targets.containsKey(c.getLabel()));
+        assertTrue("expect a to have an edge to c of weight 2", targets.get(c.getLabel()).equals(2));
         assertEquals("expect two targets in a.targets", 2, targets.size());
         assertTrue(a.toString().equals("(a, [(b, 1), (c, 2)])") ||
                 a.toString().equals("(a, [(c, 2), (b, 1)])"));
@@ -132,8 +132,8 @@ public class ConcreteVerticesGraphTest extends GraphInstanceTest {
         Vertex a = new Vertex("a");
         Vertex b = new Vertex("b");
 
-        a.setTarget(b, 1);
-        a.setTarget(b, 0);
+        a.setTarget(b.getLabel(), 1);
+        a.setTarget(b.getLabel(), 0);
         Map<Vertex, Integer> targets = a.getTargets();
         assertEquals("expect a to have no targets", 0, targets.size());
         assertTrue(a.toString().equals("(a, [])"));
@@ -144,10 +144,10 @@ public class ConcreteVerticesGraphTest extends GraphInstanceTest {
         Vertex a = new Vertex("a");
         Vertex b = new Vertex("b");
 
-        a.setTarget(b, 1);
-        a.setTarget(b, 2);
-        Map<Vertex, Integer> targets = a.getTargets();
-        assertTrue("expect a to have target b", targets.containsKey(b));
+        a.setTarget(b.getLabel(), 1);
+        a.setTarget(b.getLabel(), 2);
+        Map<String, Integer> targets = a.getTargets();
+        assertTrue("expect a to have target b", targets.containsKey(b.getLabel()));
         assertTrue("expect a to have a target with weight 2", targets.containsValue(2));
         assertEquals("expect a to have 1 target", 1, targets.size());
         assertTrue(a.toString().equals("(a, [(b, 2)])"));
@@ -157,7 +157,7 @@ public class ConcreteVerticesGraphTest extends GraphInstanceTest {
     public void testSetNonExistingTargetToZero() {
         Vertex a = new Vertex("a");
         Vertex b = new Vertex("b");
-        a.setTarget(b, 0);
+        a.setTarget(b.getLabel(), 0);
         Map<Vertex, Integer> targets = a.getTargets();
         assertTrue("expect no targets in a.targets", targets.isEmpty());
         assertTrue(a.toString().equals("(a, [])"));

@@ -115,8 +115,8 @@ public abstract class GraphInstanceTest {
         assertEquals("expect no such edge in graph", 0, G.set("a", "b", 1));
         assertEquals("expect two vertices", 2, G.vertices().size());
         assertTrue("expect an edge from a to b with weight 2", G.targets("a").containsKey("b") &&
-                G.targets("a").containsValue(2) && G.sources("b").containsKey("a") &&
-                G.sources("b").containsValue(2));
+                G.targets("a").containsValue(1) && G.sources("b").containsKey("a") &&
+                G.sources("b").containsValue(1));
     }
 
     @Test
@@ -149,7 +149,7 @@ public abstract class GraphInstanceTest {
         Graph<String> G = emptyInstance();
         assertEquals("expect no such edge in graph", 0, G.set("a", "a", 2));
         assertEquals("expect one vertex", 1, G.vertices().size());
-        assertEquals("expect a reflexive edge from a to a", G.targets("a").containsKey("a") &&
+        assertTrue("expect a reflexive edge from a to a", G.targets("a").containsKey("a") &&
                 G.targets("a").containsValue(2) && G.sources("a").containsKey("a") &&
                 G.sources("a").containsValue(2));
     }
@@ -159,7 +159,7 @@ public abstract class GraphInstanceTest {
     public void testSetExistingEdge1() {
         Graph<String> G = emptyInstance();
         G.set("a", "b", 1);
-        assertEquals("expect previous weight to be 1", G.set("a", "b", 2));
+        assertEquals("expect previous weight to be 1", 1, G.set("a", "b", 2));
         assertTrue("expect the edge weight to be 2 after setting", G.targets("a").get("b").equals(2));
 //        assertEquals("expect edge weight to be 2", 2, G.targets("a").get("b"));
         assertEquals("expect the previous edge weight to be 2", 2, G.set("a", "b", 2));
@@ -171,7 +171,7 @@ public abstract class GraphInstanceTest {
     public void testSetExistingEdge2() {
         Graph<String> G = emptyInstance();
         G.set("a", "b", 1);
-        assertEquals("expect previous weight to be 1", G.set("a", "b", 1));
+        assertEquals("expect previous weight to be 1", 1, G.set("a", "b", 1));
         assertTrue(G.targets("a").get("b").equals(1));
     }
 
@@ -226,7 +226,7 @@ public abstract class GraphInstanceTest {
         Graph<String> G = emptyInstance();
         G.add("a");
         // the in degree is 0, the out degree is 0
-        assertTrue(G.remove("a") && !G.vertices().contains(new Vertex("a")));
+        assertTrue(G.remove("a") && !G.vertices().contains("a"));
         // the in degree is 0, the out degree is 1 (a); the in degree is 1, the out degree is 0
         G.add("a");
         G.set("a", "b", 1);
@@ -268,7 +268,7 @@ public abstract class GraphInstanceTest {
         assertTrue(!G.vertices().contains("a") && G.sources("a").size() == 0 &&
                 G.targets("a").size() == 0 && !G.targets("b").containsKey("a") &&
                 !G.targets("c").containsKey("a") && !G.sources("b").containsKey("a") &&
-                !G.sources("c").containsKey("a") && G.vertices().size()==3);
+                !G.sources("c").containsKey("a") && G.vertices().size()==2);
         // remove reflexive vertex
         assertEquals(0, G.set("b", "b", 1));
         assertTrue(G.remove("b"));

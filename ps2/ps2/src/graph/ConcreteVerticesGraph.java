@@ -4,6 +4,7 @@
 package graph;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * An implementation of Graph.
@@ -12,7 +13,7 @@ import java.util.*;
  */
 public class ConcreteVerticesGraph<L> implements Graph<String> {
     
-    private final List<Vertex> vertices = new ArrayList<>();
+    private final List<Vertex<L>> vertices = new ArrayList<>();
     
     // Abstraction function:
     //   AF(r) = an ordered pair (V, E)
@@ -43,17 +44,17 @@ public class ConcreteVerticesGraph<L> implements Graph<String> {
 
     // asserts that every element in vertices has only edges to elements in vertices
     private void checkEdgeInvariant() {
-        int V = vertices.size();
         for (Vertex v : vertices) {
-            for (Vertex target : v.getTargets().keySet()) {
-                assert vertices.contains(target);
-            }
+            // reference: https://www.runoob.com/java/java-hashmap-foreach.html
+            v.getTargets().forEach((key, value) -> {
+                assert vertices().contains(key);
+            });
         }
     }
     
     @Override public boolean add(String vertex) {
         Vertex v = new Vertex(vertex);
-        if (vertices.contains(v)) {
+        if (vertices().contains(vertex)) {
             return false;
         } else {
             vertices.add(v);
@@ -62,18 +63,17 @@ public class ConcreteVerticesGraph<L> implements Graph<String> {
     }
     
     @Override public int set(String source, String target, int weight) {
-        Vertex t = new Vertex(target);
-        Vertex s = new Vertex(source);
-        int previousWeight;
+        int previousWeight = 0;
+        final int indexOfSource;
         if (weight != 0) {
             add(source);
             add(target);
-            previousWeight = vertices.get(vertices.indexOf(s)).setTarget(t, weight);
+            indexOfSource = indexOf(source);
+            previousWeight = vertices.get(indexOfSource).setTarget(target, weight);
         } else {
-            if (vertices.contains(s) && vertices.contains(t)) {
-                previousWeight = vertices.get(vertices.indexOf(s)).setTarget(t, weight);
-            } else {
-                previousWeight = 0;
+            if (vertices().contains(source) && vertices().contains(target)) {
+                indexOfSource = indexOf(source);
+                previousWeight = vertices.get(indexOfSource).setTarget(target, weight);
             }
         }
         return previousWeight;
@@ -85,19 +85,20 @@ public class ConcreteVerticesGraph<L> implements Graph<String> {
         } else {
             Map<String, Integer> sources = sources(vertex);
             Map<String, Integer> targets = targets(vertex);
-            Vertex vertexToBeRemoved = new Vertex(vertex);
+            final int indexOfVertex = indexOf(vertex);
+            Vertex<L> v = vertices.get(indexOfVertex);
+
             // remove edges from the vertex
             for (String t : targets.keySet()) {
-                Vertex target = new Vertex(t);
-                vertices.get(vertices.indexOf(vertexToBeRemoved)).setTarget(target, 0);
+                v.setTarget(t, 0);
             }
             // remove edges to the vertex
             for (String s : sources.keySet()) {
-                Vertex source = new Vertex(s);
-                vertices.get(vertices.indexOf(source)).setTarget(vertexToBeRemoved, 0);
+                vertices.get(indexOf(s)).setTarget(vertex, 0);
             }
             // remove the vertex from the graph
-            vertices.remove(vertexToBeRemoved);
+            vertices.remove(v);
+
             return true;
         }
     }
@@ -109,42 +110,62 @@ public class ConcreteVerticesGraph<L> implements Graph<String> {
     }
     
     @Override public Map<String, Integer> sources(String target) {
-        Vertex t = new Vertex(target);
         Map<String, Integer> sources = new HashMap<>();
         vertices.stream().forEach(vertex -> {
-            Map<Vertex, Integer> targets = vertex.getTargets();
-            if (targets.containsKey(t)) {
-                sources.put(vertex.getLabel(), targets.get(t));
+            Map<String, Integer> targets = vertex.getTargets();
+            if (targets.containsKey(target)) {
+                sources.put(vertex.getLabel(), targets.get(target));
             }
         });
         return sources;
     }
     
     @Override public Map<String, Integer> targets(String source) {
-        Vertex s = new Vertex(source);
-        Map<String, Integer> targets = new HashMap<>();
-        for (Map.Entry<Vertex, Integer> entry : vertices.get(vertices.indexOf(s)).getTargets().entrySet()) {
-            targets.put(entry.getKey().getLabel(), entry.getValue());
+        // streams of maps to maps: https://stackoverflow.com/questions/26752919/stream-of-maps-to-map
+        return vertices.stream()
+                .filter(vertex -> vertex.getLabel().equals(source))
+                .map(vertex -> vertex.getTargets())
+                .flatMap(map -> map.entrySet().stream())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private int indexOf(String vertex) {
+        for (int i = 0; i < vertices.size(); i++) {
+            if (vertices.get(i).getLabel().equals(vertex)) {
+                return i;
+            }
         }
-        return targets;
+        return -1; // the vertex does not exist in this graph
     }
 
     /**
      * Returns a string representation of this vertices graph, e.g.,
-     * [(a, [(c, 2), (b, 1)]), (b, [(a, 2), (c, 1)])]
+     * ({a, b}, {(a, b, 1), (b, a, 2)})
      *
-     * @return a list of vertices, with each element represented by @Vertex
+     * @return
      */
     @Override public String toString() {
-        StringBuilder s = new StringBuilder();
-        List<String> graph = new ArrayList<>();
-        for (Vertex v : this.vertices) {
-            graph.add(v.toString());
+        final Set<String> edgeSet = new HashSet<>();
+
+        for (Vertex<L> vertex : vertices) {
+            for (Map.Entry<String, Integer> entry :
+                    vertex.getTargets().entrySet()) {
+
+                final String edgeTuple = String.format("(%s, %s, %s)", vertex.getLabel(),
+                        entry.getKey(), entry.getValue());
+
+                edgeSet.add(edgeTuple);
+            }
         }
-        s.append(graph.toString());
-        return s.toString();
+
+        final String toStringEdgeSet = edgeSet.toString().replace('[', '{').replace(']', '}');
+        final String toStringVertexSet = vertices().toString().replace('[', '{').replace(']', '}');
+        final String toString = "(" + toStringVertexSet + ", " +
+                toStringEdgeSet + ")";
+
+        checkRep();
+        return toString;
     }
-    
 }
 
 /**
@@ -157,10 +178,10 @@ public class ConcreteVerticesGraph<L> implements Graph<String> {
  * <p>PS2 instructions: the specification and implementation of this class is
  * up to you.
  */
-class Vertex {
+class Vertex<L> {
 
     private final String label;
-    private final Map<Vertex, Integer> targets = new HashMap<>();
+    private final Map<String, Integer> targets = new HashMap<>();
     
     // Abstraction function:
     //   Represents a vertex with label = this.label and targets
@@ -185,10 +206,10 @@ class Vertex {
     
     public void checkRep() {
         assert this.label != null;
-        for (Map.Entry<Vertex, Integer> entry : targets.entrySet()) {
+        for (Map.Entry<String, Integer> entry : targets.entrySet()) {
             assert entry.getValue() > 0;
-            Vertex target = entry.getKey();
-            assert target.getLabel() != null;
+            String target = entry.getKey();
+            assert target != null;
             assert getTargets().get(target).equals(entry.getValue());
         }
     }
@@ -208,7 +229,7 @@ class Vertex {
      * @return the previous weight of the edge, or zero if there was no such edge
      * @throws IllegalArgumentException if weight is a negative integer
      */
-    public int setTarget(Vertex v, Integer weight) {
+    public int setTarget(String v, Integer weight) {
         if (weight < 0) throw new IllegalArgumentException("Invalid weight");
         int previousWeight = 0;
         if (targets.containsKey(v)) {
@@ -228,8 +249,8 @@ class Vertex {
      * @return a map with keys containing set of all vertices that are head of an edge from
      * this, the values are the associated weight of that edge.
      */
-    public Map<Vertex, Integer> getTargets() {
-        final Map<Vertex, Integer> targets = new HashMap<>(this.targets);
+    public Map<String, Integer> getTargets() {
+        final Map<String, Integer> targets = new HashMap<>(this.targets);
         return targets;
     }
 
@@ -243,8 +264,8 @@ class Vertex {
         StringBuilder s = new StringBuilder();
         List<String> targets = new ArrayList<>();
         s.append("(" + getLabel() + ", ");
-        for (Map.Entry<Vertex, Integer> target : getTargets().entrySet()) {
-            String targetString = String.format("(%s, %s)", target.getKey().getLabel(), target.getValue().toString());
+        for (Map.Entry<String, Integer> target : getTargets().entrySet()) {
+            String targetString = String.format("(%s, %s)", target.getKey(), target.getValue().toString());
             targets.add(targetString);
         }
         s.append(targets.toString() + ")");
