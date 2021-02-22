@@ -142,7 +142,7 @@ public class ConcreteVerticesGraph<L> implements Graph<String> {
      * Returns a string representation of this vertices graph, e.g.,
      * ({a, b}, {(a, b, 1), (b, a, 2)})
      *
-     * @return
+     * @return vertices followed by edges
      */
     @Override public String toString() {
         final Set<String> edgeSet = new HashSet<>();
@@ -188,7 +188,7 @@ class Vertex<L> {
     //   that constitute the edges.
     // Representation invariant:
     //   vertex label is a string that must not be null
-    //   the value of the target entries are non-negative integers
+    //   the value of the target entries are positive integers
     // Safety from rep exposure:
     //   All fields are private. this.label is immutable. this.targets are mutable, but these
     //   Maps are never directly passed in and on every return of data of type map, a defensive
