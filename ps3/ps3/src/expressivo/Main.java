@@ -6,6 +6,7 @@ package expressivo;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,7 +45,7 @@ public class Main {
                     output = Commands.differentiate(currentExpression.get(), variable);
                     currentExpression = Optional.of(output);
                 } else if (input.startsWith(SIMPLIFY_PREFIX)) {
-                    final Map<String,Double> environment = parseSimpify(input);
+                    final Map<String, BigDecimal> environment = parseSimpify(input);
                     output = Commands.simplify(currentExpression.get(), environment);
                     // ... but don't change currentExpression
                 } else {
@@ -81,17 +82,17 @@ public class Main {
     private static final String ASSIGNMENT = "(" + VARIABLE + ") *= *([^ ]+)";
     private static final String SIMPLIFY = SIMPLIFY_PREFIX + "( +" + ASSIGNMENT + ")* *";    
 
-    private static Map<String,Double> parseSimpify(final String input) {
+    private static Map<String,BigDecimal> parseSimpify(final String input) {
         final Matcher commandMatcher = Pattern.compile(SIMPLIFY).matcher(input);
         if (!commandMatcher.matches()) {
             throw new CommandSyntaxException("usage: !simplify var1=val1 var2=val2 ...");
         }
         
-        final Map<String,Double> environment = new HashMap<>();
+        final Map<String,BigDecimal> environment = new HashMap<>();
         final Matcher argumentMatcher = Pattern.compile(ASSIGNMENT).matcher(input);
         while (argumentMatcher.find()) {
             final String variable = argumentMatcher.group(1);
-            final double value = Double.valueOf(argumentMatcher.group(2));
+            final BigDecimal value = new BigDecimal(argumentMatcher.group(2));
             environment.put(variable, value);
         }
 

@@ -110,12 +110,24 @@ public interface Expression {
      */
     @Override
     public int hashCode();
-    
-    // TODO more instance methods
+
+    /**
+     * The simplification operation takes an expression and an environment (a mapping of variables to values). It substitutes the
+     * values for those variables into the expression, and attempts to simplify the substituted polynomial as much as it can.
+     * @param env
+     * @return the simplified expression
+     */
     public Expression simplify(Map<String, BigDecimal> env);
 
+    /**
+     * The symbolic differentiation operation takes an expression and a variable, and produces an expression with the derivative of the
+     * input with respect to the variable.
+     * @param val
+     * @return Expression
+     */
     public Expression differentiate(String val);
 
+    // whether the Expression is of a Number
     public boolean isNumber();
 
 }

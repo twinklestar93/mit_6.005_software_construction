@@ -3,6 +3,7 @@
  */
 package expressivo;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 /**
@@ -24,7 +25,9 @@ public class Commands {
      * @throws IllegalArgumentException if the expression or variable is invalid
      */
     public static String differentiate(String expression, String variable) {
-        throw new RuntimeException("unimplemented");
+        Expression expr = Expression.parse(expression);
+        return expr.differentiate(variable).toString();
+//        throw new RuntimeException("unimplemented");
     }
     
     /**
@@ -39,8 +42,10 @@ public class Commands {
      *         Additional simplifications to the expression may be done at the implementor's discretion.
      * @throws IllegalArgumentException if the expression is invalid
      */
-    public static String simplify(String expression, Map<String,Double> environment) {
-        throw new RuntimeException("unimplemented");
+    public static String simplify(String expression, Map<String, BigDecimal> environment) {
+        Expression expr = Expression.parse(expression);
+        return expr.simplify(environment).toString();
+//        throw new RuntimeException("unimplemented");
     }
     
 }
