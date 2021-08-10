@@ -28,19 +28,44 @@ public class MinesweeperServer {
     private final ServerSocket serverSocket;
     /** True if the server should *not* disconnect a client after a BOOM message. */
     private final boolean debug;
+    /** number of players */
+    private volatile int players;
+    private final Object playerLock = new Object();
+
+    /** the board */
+    private final Board board;
 
     // TODO: Abstraction function, rep invariant, rep exposure
+    // Abstract function
+    //    AF(serverSocket, players, board, debug) = a Minesweeper server that opens a socket serverSocket
+    //    that allows players to play on a board, and debugging with a debug flag.
+
+    // Rep invariant
+    //    players >= 0
+
+    // Rep exposure
+    //    all fields are private and final immutable type
+    //    board and players are mutable, but never return to client
+
+    public void checkRep() {
+        assert players >= 0;
+        assert board != null;
+        assert serverSocket != null;
+    }
 
     /**
      * Make a MinesweeperServer that listens for connections on port.
      * 
      * @param port port number, requires 0 <= port <= 65535
      * @param debug debug mode flag
+     * @param board the board
      * @throws IOException if an error occurs opening the server socket
      */
-    public MinesweeperServer(int port, boolean debug) throws IOException {
+    public MinesweeperServer(int port, boolean debug, Board board) throws IOException {
         serverSocket = new ServerSocket(port);
         this.debug = debug;
+        this.board = board;
+        this.players = 0;
     }
 
     /**
@@ -55,14 +80,18 @@ public class MinesweeperServer {
             // block until a client connects
             Socket socket = serverSocket.accept();
 
-            // handle the client
-            try {
-                handleConnection(socket);
-            } catch (IOException ioe) {
-                ioe.printStackTrace(); // but don't terminate serve()
-            } finally {
-                socket.close();
-            }
+            // handle multiple clients
+            new Thread(() -> {
+                try {
+                    try {
+                        handleConnection(socket);
+                    } finally {
+                        socket.close();
+                    }
+                } catch (IOException ioe) {
+                    ioe.printStackTrace();
+                }
+            }).start();
         }
     }
 
@@ -76,17 +105,37 @@ public class MinesweeperServer {
         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
+        synchronized(playerLock) {
+            this.players += 1;
+        }
+
+        String HELLO = "Welcome to Minesweeper. Board: " + board.getWidth() + " columns by " + board.getHeight() + " rows." +
+                " Players: " + this.players + " including you. Type 'help' for help.\n";
+        out.println(HELLO);
+
         try {
             for (String line = in.readLine(); line != null; line = in.readLine()) {
                 String output = handleRequest(line);
                 if (output != null) {
                     // TODO: Consider improving spec of handleRequest to avoid use of null
+                    if (output.equals("BOOM!\n")) {
+                        if (!debug) {
+                            break;
+                        }
+                    }
+                    if (output.equals("DISCONNECT\n")) {
+                        break;
+                    }
                     out.println(output);
                 }
             }
         } finally {
             out.close();
             in.close();
+        }
+
+        synchronized (playerLock) {
+            players -= 1;
         }
     }
 
@@ -101,30 +150,41 @@ public class MinesweeperServer {
                      + "(dig -?\\d+ -?\\d+)|(flag -?\\d+ -?\\d+)|(deflag -?\\d+ -?\\d+)";
         if ( ! input.matches(regex)) {
             // invalid input
-            // TODO Problem 5
+            return "Invalid command, please enter look, bye, dig X Y, flag X Y, deflag X Y\n";
         }
         String[] tokens = input.split(" ");
         if (tokens[0].equals("look")) {
             // 'look' request
-            // TODO Problem 5
+            return board.toString();
         } else if (tokens[0].equals("help")) {
             // 'help' request
-            // TODO Problem 5
+            return "Enter commands: look, bye, dig X Y, flag X Y, deflag X Y\n";
         } else if (tokens[0].equals("bye")) {
             // 'bye' request
-            // TODO Problem 5
+            return "DISCONNECT\n";
         } else {
             int x = Integer.parseInt(tokens[1]);
             int y = Integer.parseInt(tokens[2]);
-            if (tokens[0].equals("dig")) {
-                // 'dig x y' request
-                // TODO Problem 5
-            } else if (tokens[0].equals("flag")) {
-                // 'flag x y' request
-                // TODO Problem 5
-            } else if (tokens[0].equals("deflag")) {
-                // 'deflag x y' request
-                // TODO Problem 5
+            if ((x >= 0 && x < board.getHeight()) && (y >= 0 && y < board.getWidth())) {
+                if (tokens[0].equals("dig")) {
+                    // 'dig x y' request
+                    boolean boom = board.dig(x, y);
+                    if (boom) {
+                        return "BOOM!\n";
+                    } else {
+                        return board.toString();
+                    }
+                } else if (tokens[0].equals("flag")) {
+                    // 'flag x y' request
+                    board.flag(x, y);
+                    return board.toString();
+                } else if (tokens[0].equals("deflag")) {
+                    // 'deflag x y' request
+                    board.deflag(x, y);
+                    return board.toString();
+                }
+            } else {
+                return board.toString();
             }
         }
         // TODO: Should never get here, make sure to return in each of the cases above
@@ -246,10 +306,15 @@ public class MinesweeperServer {
      * @throws IOException if a network error occurs
      */
     public static void runMinesweeperServer(boolean debug, Optional<File> file, int sizeX, int sizeY, int port) throws IOException {
+
+        Board board;
+        if (file.isPresent()) {
+            board = new Board(file.get());
+        } else {
+            board = new Board(sizeX, sizeY, 0.5);
+        }
         
-        // TODO: Continue implementation here in problem 4
-        
-        MinesweeperServer server = new MinesweeperServer(port, debug);
+        MinesweeperServer server = new MinesweeperServer(port, debug, board);
         server.serve();
     }
 }
